@@ -4,7 +4,7 @@ const server_game_list = "2002";
 const server_new_game = "2003";
 const server_player_enter = "2004";
 const server_player_exit = "2005";
-const server_chat_message = "2006";
+const server_action_message = "2006";
 const server_remove_game = "2007";
 const server_message_box = "2999";
 
@@ -191,7 +191,12 @@ function hostAction(connection, message) {
 			break;
 		case client_chat_message: // сообщение в чат
 			if (!connection.game) break;
-			sendToAll(server_chat_message, msg, connection.game);
+			if (msg.index >= 0) {
+				let con = findItem(msg.index, connection_list);
+				if (con) sendMsg(con, server_action_message, msg);
+			} else {
+				sendToAll(server_action_message, msg, connection.game);
+			}
 			break;
 	}
 }
