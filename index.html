@@ -1,0 +1,13 @@
+<html>
+<body>
+<button onclick="setSocket()">Подключиться</button>
+<script>
+const address_node = "ws://cotton-wooded-elephant.glitch.me/";//"ws://localhost:3000";//
+function setSocket() {
+	socket = new WebSocket(address_node);
+	socket.onmessage = (message) => {console.log(message)}
+	socket.onerror = (err) => {console.log(err)}
+}
+</script>
+</body>
+</html>
