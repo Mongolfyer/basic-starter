@@ -1,19 +1,21 @@
 // команды сервера
-const server_player_index = "2001";
-const server_game_list = "2002";
-const server_new_game = "2003";
-const server_player_enter = "2004";
-const server_player_exit = "2005";
-const server_action_message = "2006";
-const server_remove_game = "2007";
+const server_client_accepted = "2001";
+const server_player_index = "2002";
+const server_game_list = "2003";
+const server_new_game = "2004";
+const server_player_enter = "2005";
+const server_player_exit = "2006";
+const server_action_message = "2007";
+const server_remove_game = "2008";
 const server_message_box = "2999";
 
 // команды клиента
 const client_disconnect = "1000";
-const client_new_game = "1001";
-const client_enter_game = "1002";
-const client_exit_game = "1003";
-const client_chat_message = "1004";
+const client_player_index = "1001";
+const client_new_game = "1002";
+const client_enter_game = "1003";
+const client_exit_game = "1004";
+const client_chat_message = "1005";
 const client_nothing = "1999";
 
 let net = new require('ws');
@@ -38,16 +40,7 @@ server.on("connection",(connection) => {
 	connection.on("message", connection.client_data_handler);
 	connection.on("close", connection.client_end_handler);
 	connection.on("error",() => {});
-	connection.index = cur_index ++; // присвоение индекса
-	connection_list.push(connection);
-	// отправка индекса
-	sendMsg(connection, server_player_index, {
-		index: connection.index
-	});
-	// отправка списка игр
-	sendMsg(connection, server_game_list, {
-		games: makeGameList()
-	});
+	sendMsg(connection, server_client_accepted, {});
 });
 server.on("error",(err) => {});
 
@@ -147,6 +140,18 @@ function hostAction(connection, message) {
 	switch (msg.code) {
 		case client_disconnect: // клиент отсоединяется
 			shutDownConnection(connection);
+			break;
+		case client_player_index: // клиент запрашивает индекс игрока
+			connection.index = cur_index ++; // присвоение индекса
+			connection_list.push(connection);
+			// отправка индекса
+			sendMsg(connection, server_player_index, {
+				index: connection.index
+			});
+			// отправка списка игр
+			sendMsg(connection, server_game_list, {
+				games: makeGameList()
+			});
 			break;
 		case client_new_game: // создаётся новая игра
 			if (games.find(item => item.name == msg.name && !item.in_game)) {
