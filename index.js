@@ -112,7 +112,6 @@ function shutDownConnection(connection) {
 		connection_list[connection.prog].splice(index, 1);
 	}
 	if (!connection.ended) connection.close(); // завершение соединения
-	if (connection_list[connection.prog].length <= 0) cur_index = 0;
 }
 
 // выход из игры
