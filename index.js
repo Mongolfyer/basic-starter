@@ -103,15 +103,12 @@ function makeGameList(prog) {
 
 // отключение клиента хостом
 function shutDownConnection(connection) {
-	// выход из игры
-	exitFromGame(connection);
+	exitFromGame(connection); // выход из игры
+	if (!connection.ended) connection.close(); // завершение соединения
 	// удаление из массива подключений
 	if (!connection_list[connection.prog]) return;
 	let index = connection_list[connection.prog].findIndex(item => item.index == connection.index);
-	if (index > -1) {
-		connection_list[connection.prog].splice(index, 1);
-	}
-	if (!connection.ended) connection.close(); // завершение соединения
+	if (index > -1) connection_list[connection.prog].splice(index, 1);
 }
 
 // выход из игры
