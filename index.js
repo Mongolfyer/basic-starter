@@ -176,7 +176,7 @@ function playGo(game, prog) {
 }
 
 function hostAction(connection, message) {
-	//console.log(message);
+	console.log(message);
 	let msg = null;
 	let obj = null;
 	let ind = 0;
