@@ -26,6 +26,9 @@ const client_echo = "1997";
 const client_reconnect = "1998";
 const client_nothing = "1999";
 
+const error_duplicate_room_name = 1;
+const error_game_run_without = 2;
+
 let net = new require('ws');
 let server = new net.Server({port: 3000});
 let cur_index = 0;
@@ -154,6 +157,7 @@ function playGo(game, prog) {
 			// выражается сожаление
 			if (game.index != connection.index) {
 				sendMsg(connection, server_message_box, {
+					err_code: error_game_run_without,
 					message: "К сожалению, игра была начата без Вас! Попробуйте присоединиться к<br>другой партии или создайте свою!"
 				});
 			}
@@ -205,6 +209,7 @@ function hostAction(connection, message) {
 			if (!games[connection.prog]) break;
 			if (games[connection.prog].find(item => item.name == msg.name && !item.in_game)) {
 				sendMsg(connection, server_message_box, {
+					err_code: error_duplicate_room_name,
 					message: "Игра с таким названием уже существует!"
 				});
 				break;
@@ -223,9 +228,9 @@ function hostAction(connection, message) {
 			sendToAll(server_new_game, msg, connection.prog);
 			break;
 		case client_enter_game: // игрок присоединяется к создаваемой партии
-			connection.game = findGame(msg.index, connection.prog, false);
+			connection.game = findGame(msg.game_index, connection.prog, false);
 			if (!connection.game) break;
-			if (connection.game.index == msg.player.index) {
+			if (connection.game.index == connection.index) {
 				msg.player.is_host = true;
 				msg.player.checked = true;
 			}
@@ -248,9 +253,9 @@ function hostAction(connection, message) {
 			break;
 		case client_action_message: // общение между клиентами
 			if (!connection.game) break;
-			msg.player = {index: connection.index}
-			if (msg.index >= 0) {
-				let con = findItem(msg.index, connection_list[connection.prog]);
+			msg.from_index = connection.index;
+			if (msg.to_index >= 0) {
+				let con = findItem(msg.to_index, connection_list[connection.prog]);
 				if (con) sendMsg(con, server_action_message, msg);
 			} else {
 				sendToAll(server_action_message, msg, connection.prog, connection.game);
@@ -292,6 +297,10 @@ function hostAction(connection, message) {
 					index: connection.index,
 					passcode: connection.passcode
 				});
+				obj.index = -1;
+				obj.game = null;
+				obj.player = null;
+				shutDownConnection(obj);
 				for (let action of actions_seq) sendMsg(connection, action.code, action.msg);
 			}
 			break;
