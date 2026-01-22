@@ -10,6 +10,7 @@ const server_action_message = "2008";
 const server_remove_game = "2009";
 const server_start_game = "2010";
 const server_chat_message = "2011";
+const server_reconnect_request = "2100";
 const server_message_box = "2999";
 
 // команды клиента
@@ -22,6 +23,7 @@ const client_change = "1005";
 const client_action_message = "1006";
 const client_start_game = "1007";
 const client_chat_message = "1008";
+const client_set_reserver = "1100";
 const client_echo = "1997";
 const client_reconnect = "1998";
 const client_nothing = "1999";
@@ -47,7 +49,13 @@ server.on("connection",(connection) => {
 			index = received.indexOf("\n");
 		}
 	}
-	connection.client_end_handler =() => {hostAction(connection, JSON.stringify({code: client_disconnect}));}
+	connection.client_end_handler = () => {
+		if (connection.reserver && connection.reserver.readyState == 1) {
+			sendMsg(connection.reserver, server_reconnect_request, {});
+		} else {
+			hostAction(connection, JSON.stringify({code: client_disconnect}));
+		}
+	}
 	connection.on("message", connection.client_data_handler);
 	connection.on("close", connection.client_end_handler);
 	connection.on("error",() => {});
@@ -271,6 +279,26 @@ function hostAction(connection, message) {
 			ind = connection.actions_seq.findIndex(item => item.index == msg.index);
 			if (ind > -1) connection.actions_seq.splice(ind, 1);
 			break;
+		case client_set_reserver: // установка резервной связи
+			obj = findItem(msg.index, connection_list[connection.prog]);
+			if (!obj || obj.passcode != msg.passcode) break;
+			if (obj.reserver) {
+				let r = obj.reserver;
+				obj.reserver = null;
+				shutDownConnection(r);
+			}
+			obj.reserver = connection;
+			connection.on("close", () => {
+				let c = connection_list[connection.prog].find(item => item.reserver && item.reserver.index == connection.index);
+				if (!c) return;
+				if (c.readyState == 1) {
+					sendMsg(c, server_reconnect_request, {});
+				} else {
+					shutDownConnection(c);
+				}
+			});
+			deleteItem(connection.index, connection_list[connection.prog]);
+			break;
 		case client_reconnect: // игрок переподключается после обрыва связи
 			if (msg.player_index == connection.index || !connection_list[connection.prog]) {
 				sendMsg(connection, server_player_index, {
@@ -287,6 +315,7 @@ function hostAction(connection, message) {
 				connection.index = obj.index; // присвоение индекса
 				connection.game = obj.game;
 				connection.player = obj.player; // ассоциация с игроком
+				connection.reserver = obj.reserver;
 				if (connection.game) {
 					let i = obj.game.connections.findIndex(item => item.index == obj.index);
 					if (i > -1) obj.game.connections[i] = connection;
@@ -301,6 +330,7 @@ function hostAction(connection, message) {
 				obj.game = null;
 				obj.player = null;
 				shutDownConnection(obj);
+				shutDownConnection(obj.reserver);
 				for (let action of actions_seq) sendMsg(connection, action.code, action.msg);
 			}
 			break;
